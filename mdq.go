@@ -35,12 +35,21 @@ type MdFile struct {
 	Html     string
 	Config   MdFileConfig
 	Endpoint string
+	Depth    int
 }
 
 func NewMdFileFromPath(path string, theme string) (MdFile, error) {
-	md := &MdFile{
-		Path: path,
+	relPath, err := filepath.Rel("./docs", path)
+	if err != nil {
+		relPath = path // fallback if relative fails
 	}
+	depth := len(strings.Split(filepath.Dir(relPath), string(os.PathSeparator)))
+
+	md := &MdFile{
+		Path:  path,
+		Depth: depth,
+	}
+
 	f, err := os.ReadFile(md.Path)
 	if err != nil {
 		return *md, err
@@ -64,6 +73,7 @@ func NewMdFileFromPath(path string, theme string) (MdFile, error) {
 			goldmarkhtml.WithUnsafe(),
 		),
 	)
+
 	var buf bytes.Buffer
 	err = gm.Convert([]byte(md.Text), &buf)
 	if err != nil {
@@ -102,7 +112,7 @@ func NewMdFileFromPath(path string, theme string) (MdFile, error) {
 
 	md.Config = config
 
-	parts := strings.Split(path, "/")[1:]
+	parts := strings.Split(relPath, string(os.PathSeparator))
 	if len(parts) == 1 && parts[0] == "index.md" {
 		md.Endpoint = "/"
 	} else {
@@ -119,7 +129,7 @@ func NewMdFileFromPath(path string, theme string) (MdFile, error) {
 
 func NewMdFilesFromDir(path string, theme string) ([]MdFile, error) {
 	var mds []MdFile
-	err := filepath.Walk("./docs", func(path string, info fs.FileInfo, err error) error {
+	err := filepath.Walk(path, func(path string, info fs.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
 		}
