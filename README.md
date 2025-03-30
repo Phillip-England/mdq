@@ -22,7 +22,7 @@ func main() {
 Place config at the **TOP** of your markdown files like so:
 ```md
 <config>
-  <set name='title' value='A good title for config-friendly markdown content' />
+  <set key='title' value='A good title for config-friendly markdown content' />
 </config>
 ```
 

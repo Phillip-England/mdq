@@ -20,10 +20,10 @@ type MdFileConfig map[string]string
 func newMdFileConfigFromGoQuery(doc *goquery.Document) (MdFileConfig, error) {
 	conf := make(MdFileConfig)
 	doc.Find("set").Each(func(i int, s *goquery.Selection) {
-		name, _ := s.Attr("name")
+		key, _ := s.Attr("key")
 		value, _ := s.Attr("value")
-		name = strings.ToLower(name)
-		conf[name] = value
+		key = strings.ToLower(key)
+		conf[key] = value
 	})
 
 	return conf, nil
