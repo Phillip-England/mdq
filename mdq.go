@@ -22,6 +22,7 @@ type MdFile struct {
 	Html     string
 	Context  map[string]any
 	MetaHtml string
+	Name     string
 }
 
 func NewMdFileFromPath(path string, theme string) (MdFile, error) {
@@ -32,6 +33,7 @@ func NewMdFileFromPath(path string, theme string) (MdFile, error) {
 	}
 	mdFile.Text = string(mdBytes)
 	mdFile.Path = path
+	mdFile.Name = filepath.Base(path)
 	mdFile.Theme = theme
 	md := goldmark.New(
 		goldmark.WithExtensions(
