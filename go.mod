@@ -9,8 +9,11 @@ require (
 	github.com/yuin/goldmark-highlighting/v2 v2.0.0-20230729083705-37449abec8cc
 )
 
+require gopkg.in/yaml.v2 v2.3.0 // indirect
+
 require (
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/dlclark/regexp2 v1.11.4 // indirect
+	github.com/yuin/goldmark-meta v1.1.0
 	golang.org/x/net v0.35.0 // indirect
 )

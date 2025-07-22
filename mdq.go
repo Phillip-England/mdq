@@ -5,58 +5,35 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/PuerkitoBio/goquery"
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
+	meta "github.com/yuin/goldmark-meta"
 	"github.com/yuin/goldmark/parser"
-	goldmarkhtml "github.com/yuin/goldmark/renderer/html"
+	"github.com/yuin/goldmark/renderer/html"
 )
 
-type MdFileConfig map[string]string
-
-func newMdFileConfigFromGoQuery(doc *goquery.Document) (MdFileConfig, error) {
-	conf := make(MdFileConfig)
-	doc.Find("set").Each(func(i int, s *goquery.Selection) {
-		key, _ := s.Attr("key")
-		value, _ := s.Attr("value")
-		key = strings.ToLower(key)
-		conf[key] = value
-	})
-
-	return conf, nil
-}
-
 type MdFile struct {
-	Path     string
-	Text     string
-	Html     string
-	Config   MdFileConfig
-	Endpoint string
-	Depth    int
+	Path    string
+	Text    string
+	Theme   string
+	Html    string
+	Context map[string]any
 }
 
 func NewMdFileFromPath(path string, theme string) (MdFile, error) {
-	relPath, err := filepath.Rel("./docs", path)
+	var mdFile MdFile
+	mdBytes, err := os.ReadFile(path)
 	if err != nil {
-		relPath = path // fallback if relative fails
+		return mdFile, err
 	}
-	depth := len(strings.Split(filepath.Dir(relPath), string(os.PathSeparator)))
-
-	md := &MdFile{
-		Path:  path,
-		Depth: depth,
-	}
-
-	f, err := os.ReadFile(md.Path)
-	if err != nil {
-		return *md, err
-	}
-	md.Text = string(f)
-	gm := goldmark.New(
+	mdFile.Text = string(mdBytes)
+	mdFile.Path = path
+	mdFile.Theme = theme
+	md := goldmark.New(
 		goldmark.WithExtensions(
+			meta.Meta,
 			highlighting.NewHighlighting(
 				highlighting.WithStyle(theme),
 				highlighting.WithFormatOptions(
@@ -67,64 +44,23 @@ func NewMdFileFromPath(path string, theme string) (MdFile, error) {
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
 		),
+		goldmark.WithParserOptions(
+			parser.WithAttribute(),
+		),
 		goldmark.WithRendererOptions(
-			goldmarkhtml.WithHardWraps(),
-			goldmarkhtml.WithXHTML(),
-			goldmarkhtml.WithUnsafe(),
+			html.WithHardWraps(),
+			html.WithXHTML(),
+			html.WithUnsafe(),
 		),
 	)
-
 	var buf bytes.Buffer
-	err = gm.Convert([]byte(md.Text), &buf)
-	if err != nil {
-		return *md, err
+	context := parser.NewContext()
+	if err := md.Convert(mdBytes, &buf, parser.WithContext(context)); err != nil {
+		return mdFile, err
 	}
-	html := buf.String()
-	lines := strings.Split(html, "\n")
-	var configLines []string
-	var mdLines []string
-	foundConfigEnd := false
-
-	for _, line := range lines {
-		if strings.Contains(strings.Trim(line, " "), "</config>") {
-			foundConfigEnd = true
-			configLines = append(configLines, line)
-			continue
-		}
-		if !foundConfigEnd {
-			configLines = append(configLines, line)
-			continue
-		}
-		mdLines = append(mdLines, line)
-	}
-
-	md.Html = strings.Join(mdLines, "\n")
-	configHtml := strings.Join(configLines, "\n")
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(configHtml))
-	if err != nil {
-		return *md, err
-	}
-
-	config, err := newMdFileConfigFromGoQuery(doc)
-	if err != nil {
-		return *md, nil
-	}
-
-	md.Config = config
-
-	parts := strings.Split(relPath, string(os.PathSeparator))
-	if len(parts) == 1 && parts[0] == "index.md" {
-		md.Endpoint = "/"
-	} else {
-		endpoint := ""
-		for _, part := range parts {
-			part = strings.Replace(part, ".md", "", 1)
-			endpoint += "/" + part
-		}
-		md.Endpoint = endpoint
-	}
-
-	return *md, nil
+	mdFile.Html = buf.String()
+	mdFile.Context = meta.Get(context)
+	return mdFile, nil
 }
 
 func NewMdFilesFromDir(path string, theme string) ([]MdFile, error) {
@@ -147,6 +83,5 @@ func NewMdFilesFromDir(path string, theme string) ([]MdFile, error) {
 	if err != nil {
 		panic(err)
 	}
-
 	return mds, nil
 }

@@ -1,36 +1,85 @@
 # mdq
-Place config in your markdown files and parse both the config and html at once.
 
-## Credit
-All credit for this project is to [goldmark](https://github.com/yuin/goldmark) and [goquery](https://github.com/PuerkitoBio/goquery) for making this possible.
+Quick `.md` to `.html` conversion with sensible defaults.
 
-## Hello, World!
+## Installation
+
+```bash
+go get github.com/Phillip-England/mdq
+```
+
+## Usage
+
+### Convert a single Markdown file
+
 ```go
 package main
 
-import "github.com/Phillip-England/mdq"
+import (
+    "fmt"
+    "github.com/Phillip-England/mdq"
+)
 
 func main() {
-	mdFile, err := mdq.NewMdFileFromPath("./README.md", "dracula")
-	if err != nil {
-		panic(err)
-	}
+    mdFile, err := mdq.NewMdFileFromPath("example.md", "dracula")
+    if err != nil {
+        panic(err)
+    }
+    fmt.Println(mdFile.Html)
 }
 ```
 
-## Config
-Place config at the **TOP** of your markdown files like so:
-```md
-<config>
-  <set key='title' value='A good title for config-friendly markdown content' />
-</config>
-```
+This will:
 
-Access the config value:
+✅ Read `example.md`  
+✅ Convert it to HTML with syntax highlighting (`dracula` theme)  
+✅ Prepend meta tags (from the markdown context) to the HTML `<head>` section
+
+---
+
+### Convert all Markdown files in a directory
+
 ```go
-mdFile, err := mdq.NewMdFileFromPath("./README.md", "dracula")
-if err != nil {
-  panic(err)
+package main
+
+import (
+    "fmt"
+    "github.com/Phillip-England/mdq"
+)
+
+func main() {
+    mdFiles, err := mdq.NewMdFilesFromDir("./markdowns", "dracula")
+    if err != nil {
+        panic(err)
+    }
+    for _, mdFile := range mdFiles {
+        fmt.Println(mdFile.Path, mdFile.Html)
+    }
 }
-mdFile.Config["title"] // <== A good title for config-friendly markdown content
+```
+
+---
+
+### Access meta configuration in a Markdown file
+
+`mdFile.Context` is a `map[string]any` that holds key-value pairs from the frontmatter (meta) of the Markdown file.
+
+Example:
+
+```markdown
+---
+title: Hello World
+author: Phillip
+---
+
+# Welcome
+
+This is a markdown file.
+```
+
+You can access:
+
+```go
+fmt.Println(mdFile.Context["title"])  // Hello World
+fmt.Println(mdFile.Context["author"]) // Phillip
 ```
