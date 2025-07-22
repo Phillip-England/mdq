@@ -2,6 +2,7 @@ package mdq
 
 import (
 	"bytes"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -15,11 +16,12 @@ import (
 )
 
 type MdFile struct {
-	Path    string
-	Text    string
-	Theme   string
-	Html    string
-	Context map[string]any
+	Path     string
+	Text     string
+	Theme    string
+	Html     string
+	Context  map[string]any
+	MetaHtml string
 }
 
 func NewMdFileFromPath(path string, theme string) (MdFile, error) {
@@ -60,6 +62,9 @@ func NewMdFileFromPath(path string, theme string) (MdFile, error) {
 	}
 	mdFile.Html = buf.String()
 	mdFile.Context = meta.Get(context)
+	for key, value := range mdFile.Context {
+		mdFile.MetaHtml = mdFile.MetaHtml + fmt.Sprintf("<meta name='%s' content='%s'>\n", key, value)
+	}
 	return mdFile, nil
 }
 
